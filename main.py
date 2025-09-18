@@ -29,8 +29,11 @@ class ImageProcessorApp(QMainWindow):
         # 连接信号和槽
         self.connect_signals()
         
-        # 设置默认模式为default
-        self.mode_manager.set_mode('default')
+        # 检查图像列表是否为空，如果为空则设置为空模式
+        if not self.image_list_widget.image_list:
+            self.mode_manager.set_mode('empty')
+        else:
+            self.mode_manager.set_mode('default')
     
     def init_ui(self):
         # 设置窗口属性
@@ -180,32 +183,43 @@ class ImageProcessorApp(QMainWindow):
         
         # 初始按钮状态
         self._update_buttons_state()
-    
+
     def _update_buttons_state(self):
         """根据图像列表状态更新按钮可用状态"""
         has_images = len(self.image_list_widget.image_list) > 0
-        
+
         # 文件操作按钮
         self.delete_image_button.setEnabled(has_images)
         self.delete_work_button.setEnabled(has_images)
-        
+
         # 模式按钮
-        current_mode = self.mode_manager.get_current_mode()
         for mode in ['default', 'crop', 'resize', 'mark', 'correct']:
             self._set_mode_button_state(mode, has_images)
         
-        # 如果有图像，自动进入浏览模式
-        # if not has_images:
-        #     # 没有图像时，重置为无模式状态
-        #     self.set_mode(None)
-
-        if has_images and self.mode_manager.get_current_mode() is None:
-            self.set_mode('default')
+        current_mode = self.mode_manager.get_current_mode()
+        if current_mode is not None and not has_images:
+            self.set_mode(None)
+        if current_mode is None and has_images:
+            self.set_mode('default', confirm=False)
         
-    def set_mode(self, mode):
+    def set_mode(self, mode, confirm=True):
         """设置当前模式，委托给统一模式显示管理器处理，并显示确认对话框"""
+        # 空模式不需要确认对话框
+        if mode == 'empty':
+            success, message = self.mode_manager.set_mode(mode)
+            if success:
+                self.update_process_info('请先导入图像文件')
+            return
+            
         if mode is None:
             self.mode_manager.set_mode(mode)
+            return
+
+        if not confirm:
+            success, message = self.mode_manager.set_mode(mode)
+            if success:
+                self._set_mode_button_state(mode, False)
+                self.update_process_info(f'请开始操作！')
             return
         
         from PyQt5.QtWidgets import QMessageBox
@@ -248,8 +262,19 @@ class ImageProcessorApp(QMainWindow):
             'mark': self.mark_mode_button,
             'correct': self.correct_mode_button
         }
+        # 空模式不需要按钮
+        if mode == 'empty':
+            # 禁用所有模式按钮
+            for btn in button_map.values():
+                btn.setEnabled(False)
+            return
+            
+        # 对于普通模式，启用所有按钮，然后根据需要禁用当前模式按钮
+        for btn in button_map.values():
+            btn.setEnabled(True)
+        
         button = button_map.get(mode)
-        if button:
+        if button and not enabled:
             button.setEnabled(enabled)
     
     def update_process_info(self, info):

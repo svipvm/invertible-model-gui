@@ -296,6 +296,33 @@ class DefaultOptMode(BaseOptMode):
     def on_exit(self):
         self.hide_ui()
 
+class EmptyOptMode(BaseOptMode):
+    """空模式"""
+    def __init__(self, app=None):
+        super().__init__('empty', '空状态', 60, app)
+        self.info_label = None
+    
+    def get_ui_layout(self):
+        """获取空模式特有的UI布局"""
+        layout = QHBoxLayout()
+        
+        # 创建信息标签
+        self.info_label = QLabel('暂无图像，请先导入图像文件')
+        self.info_label.setStyleSheet('color: gray; font-style: italic;')
+        
+        layout.addWidget(self.info_label)
+        layout.addStretch(1)  # 添加弹性空间
+        
+        return layout
+    
+    def on_enter(self):
+        if self.app:
+            self.app.update_process_info('请先导入图像文件')
+        self.show_ui()
+    
+    def on_exit(self):
+        self.hide_ui()
+
 class CorrectOptMode(BaseOptMode):
     """修正模式"""
     def __init__(self, app=None):
@@ -407,6 +434,7 @@ class ModeOptManager:
         self.empty_state_widget = None
         
         # 初始化所有内置模式
+        self.add_mode(EmptyOptMode(app))  # 添加空模式
         self.add_mode(DefaultOptMode(app))  # 添加默认浏览模式
         self.add_mode(CropOptMode(app))
         self.add_mode(ResizeOptMode(app))

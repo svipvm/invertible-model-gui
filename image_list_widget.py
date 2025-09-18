@@ -126,12 +126,17 @@ class ImageListWidget(QWidget):
                     duplicate_count += 1
             
             if new_images:
+                # 记录导入前图像列表是否为空
+                was_empty = len(self.image_list) == 0
                 # 选中最后一个新增项
                 last_row = len(self.image_list)
                 # 添加新图像到列表
                 self.image_list.extend(new_images)
                 # 更新表格
                 self.update_table()
+                # 如果之前是空模式，切换到默认模式
+                if was_empty and self.app and hasattr(self.app, 'set_mode'):
+                    self.app.set_mode('default')
                 # 触发显示图像信号
                 self.on_image_selected(last_row, 0)
                 # 更新处理信息
@@ -179,12 +184,17 @@ class ImageListWidget(QWidget):
                             duplicate_count += 1
             
             if new_images:
+                # 记录导入前图像列表是否为空
+                was_empty = len(self.image_list) == 0
                 # 选中最后一个新增项
                 last_row = len(self.image_list)
                 # 添加新图像到列表
                 self.image_list.extend(new_images)
                 # 更新表格
                 self.update_table()
+                # 如果之前是空模式，切换到默认模式
+                if was_empty and self.app and hasattr(self.app, 'set_mode'):
+                    self.app.set_mode('default')
                 # 触发显示图像信号
                 self.on_image_selected(last_row, 0)
                 # 更新处理信息
@@ -225,7 +235,15 @@ class ImageListWidget(QWidget):
                 # 更新表格
                 self.update_table()
                 # 触发显示图像信号
-                self.on_image_selected(last_row, 0)
+                if len(self.image_list) > 0:
+                    # 如果还有图像，尝试选择一个合适的行
+                    if last_row >= len(self.image_list):
+                        last_row = len(self.image_list) - 1
+                    self.on_image_selected(last_row, 0)
+                else:
+                    # 如果图像列表为空，触发空模式
+                    if self.app and hasattr(self.app, 'set_mode'):
+                        self.app.set_mode('empty')
                 # 更新处理信息
                 self._update_info(f'已删除 {len(selected_rows)} 张图像')
         else:
@@ -254,6 +272,9 @@ class ImageListWidget(QWidget):
         self.last_selected_index = -1
         # 更新表格
         self.update_table()
+        # 触发空模式
+        if self.app and hasattr(self.app, 'set_mode'):
+            self.app.set_mode('empty')
         # 更新处理信息
         self._update_info('工作区已清空，所有图像数据已删除')
     

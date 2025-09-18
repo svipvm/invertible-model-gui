@@ -62,6 +62,66 @@ class BaseImageDisplay(QLabel):
         """退出模式时的回调"""
         pass
 
+class EmptyImageDisplay(BaseImageDisplay):
+    """空模式图像显示组件"""
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        # 不在这里设置文本，避免与paintEvent冲突
+        
+    def set_image(self, image_manager):
+        """重写set_image方法，不调用父类的setText"""
+        self.image_manager = image_manager
+        if image_manager:
+            img_path = image_manager.image_path
+            self.original_pixmap = QPixmap(img_path)
+            self._scale_image()
+        else:
+            self.original_pixmap = None
+            self.scaled_pixmap = None
+        self.update()
+        
+    def reset(self):
+        """重写reset方法，不调用父类的setText"""
+        self.image_manager = None
+        self.original_pixmap = None
+        self.scaled_pixmap = None
+        self.update()
+    
+    def paintEvent(self, event):
+        """重绘事件，完全自定义绘制逻辑，不调用父类的paintEvent"""
+        # 首先绘制背景
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.Antialiasing)
+        
+        # 绘制白色背景和边框
+        painter.fillRect(self.rect(), QBrush(QColor(255, 255, 255)))
+        painter.setPen(QPen(QColor(204, 204, 204), 1))
+        painter.drawRect(self.rect().adjusted(0, 0, -1, -1))
+        
+        # 只在没有图像时绘制提示文本
+        if not self.original_pixmap or self.original_pixmap.isNull():
+            # 设置字体样式
+            font = painter.font()
+            font.setPointSize(14)
+            font.setBold(True)
+            painter.setFont(font)
+            
+            # 设置文本颜色
+            painter.setPen(QColor(150, 150, 150))
+            
+            # 绘制提示文本
+            text = '暂无图像，请导入图像文件或文件夹'
+            rect = self.rect()
+            painter.drawText(rect, Qt.AlignCenter, text)
+            
+            # 绘制第二行文本
+            font.setPointSize(10)
+            font.setBold(False)
+            painter.setFont(font)
+            text2 = '点击左侧"导入图像"或"导入文件夹"按钮'
+            rect.adjust(0, 80, 0, 0)
+            painter.drawText(rect, Qt.AlignCenter, text2)
+
 class DefaultImageDisplay(BaseImageDisplay):
     """默认简单图像显示组件"""
     def paintEvent(self, event):
@@ -645,6 +705,10 @@ class ModeDisplayManager:
     
     def _init_components(self):
         """初始化各种模式的图像显示组件"""
+        self.components['empty'] = EmptyImageDisplay(self.app)
+        self.components['empty'].hide()
+        self.components['empty'].on_exit_mode()
+
         self.components['default'] = DefaultImageDisplay(self.app)
         self.components['default'].hide()
         self.components['default'].on_exit_mode()

@@ -21,6 +21,7 @@ class ModeManager:
         
         # 保存模式与显示组件的对应关系
         self.mode_display_map = {
+            'empty': 'empty',      # 空模式对应空模式显示组件
             'crop': 'crop',        # 裁切模式对应裁切显示组件
             'resize': 'resize',    # 缩放模式对应缩放显示组件
             'mark': 'mark',        # 打标模式对应打标显示组件
