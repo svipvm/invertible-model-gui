@@ -61,11 +61,28 @@ class ModeManager:
         统一切换模式，同时更新操作区域和显示区域
         
         参数:
-            mode_name: 要切换到的模式名称
+            mode_name: 要切换到的模式名称 (None表示无模式状态)
         
         返回:
             (success, message): 成功标志和消息
         """
+        # 处理None状态
+        if mode_name is None:
+            # 1. 通过模式管理器退出当前模式
+            if self.mode_opt_manager:
+                self.mode_opt_manager.exit_current_mode()
+            
+            # 2. 通过图像显示管理器重置显示
+            if self.image_display_manager:
+                self.image_display_manager.reset()
+            
+            # 3. 更新应用程序状态信息
+            if self.app and hasattr(self.app, 'update_process_info'):
+                self.app.update_process_info('已重置为无模式状态')
+            
+            return True, '已重置为无模式状态'
+        
+        # 正常模式切换逻辑
         # 1. 先通过模式管理器切换模式操作区域
         if self.mode_opt_manager:
             mode_success, mode_message = self.mode_opt_manager.set_mode(mode_name)
@@ -101,13 +118,12 @@ class ModeManager:
         
         return True, '已退出所有模式，返回到默认状态'
     
-    def setup_ui(self, parent_layout, operation_area_layout, display_widget):
+    def setup_ui(self, parent_layout, display_widget):
         """
         统一设置UI组件
         
         参数:
             parent_layout: 主布局（通常用于放置operation_widget）
-            operation_area_layout: 操作区域布局
             display_widget: 图像显示容器
         """
         # 1. 设置模式管理器的UI

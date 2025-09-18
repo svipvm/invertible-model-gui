@@ -106,7 +106,7 @@ class ImageProcessorApp(QMainWindow):
         center_layout.addWidget(separator1)
         
         # 使用统一模式显示管理器设置UI
-        self.mode_manager.setup_ui(center_layout, center_layout, self.image_display_widget)
+        self.mode_manager.setup_ui(center_layout, self.image_display_widget)
         
         # 处理状态区
         process_status_widget = QWidget()
@@ -173,11 +173,50 @@ class ImageProcessorApp(QMainWindow):
         self.mark_mode_button.clicked.connect(lambda: self.set_mode('mark'))
         self.correct_mode_button.clicked.connect(lambda: self.set_mode('correct'))
         
+        # 连接图像列表变化信号
+        self.image_list_widget.image_list_table.itemChanged.connect(self._update_buttons_state)
+        self.image_list_widget.image_list_table.model().rowsInserted.connect(self._update_buttons_state)
+        self.image_list_widget.image_list_table.model().rowsRemoved.connect(self._update_buttons_state)
+        
+        # 初始按钮状态
+        self._update_buttons_state()
+    
+    def _update_buttons_state(self):
+        """根据图像列表状态更新按钮可用状态"""
+        has_images = len(self.image_list_widget.image_list) > 0
+        
+        # 文件操作按钮
+        self.delete_image_button.setEnabled(has_images)
+        self.delete_work_button.setEnabled(has_images)
+        
+        # 模式按钮
+        current_mode = self.mode_manager.get_current_mode()
+        for mode in ['default', 'crop', 'resize', 'mark', 'correct']:
+            self._set_mode_button_state(mode, has_images)
+        
+        # 如果有图像，自动进入浏览模式
+        # if not has_images:
+        #     # 没有图像时，重置为无模式状态
+        #     self.set_mode(None)
+
+        if has_images and self.mode_manager.get_current_mode() is None:
+            self.set_mode('default')
+        
     def set_mode(self, mode):
         """设置当前模式，委托给统一模式显示管理器处理，并显示确认对话框"""
+        if mode is None:
+            self.mode_manager.set_mode(mode)
+            return
+        
         from PyQt5.QtWidgets import QMessageBox
         # 显示确认对话框
-        mode_names = {'default': '浏览模式', 'crop': '裁切模式', 'resize': '缩放模式', 'mark': '打标模式', 'correct': '修正模式'}
+        mode_names = {
+            'default': '浏览模式', 
+            'crop': '裁切模式', 
+            'resize': '缩放模式', 
+            'mark': '打标模式',
+            'correct': '修正模式'
+        }
         mode_display_name = mode_names.get(mode, mode)
         reply = QMessageBox.question(
             self,
@@ -189,9 +228,29 @@ class ImageProcessorApp(QMainWindow):
         
         # 如果用户确认，才切换模式
         if reply == QMessageBox.Yes:
+            # 禁用当前模式按钮
+            current_mode = self.mode_manager.get_current_mode()
+            if current_mode:
+                self._set_mode_button_state(current_mode, True)
+            
             success, message = self.mode_manager.set_mode(mode)
             if success:
+                # 禁用新模式的按钮
+                self._set_mode_button_state(mode, False)
                 self.update_process_info(f'已切换到{mode_display_name}')
+    
+    def _set_mode_button_state(self, mode, enabled):
+        """设置模式按钮的可用状态"""
+        button_map = {
+            'default': self.browse_mode_button,
+            'crop': self.crop_mode_button,
+            'resize': self.resize_mode_button,
+            'mark': self.mark_mode_button,
+            'correct': self.correct_mode_button
+        }
+        button = button_map.get(mode)
+        if button:
+            button.setEnabled(enabled)
     
     def update_process_info(self, info):
         """更新处理信息"""
@@ -232,6 +291,7 @@ class ImageProcessorApp(QMainWindow):
             # 调用当前组件的resizeEvent方法
             obj.resizeEvent(event)
         return super().eventFilter(obj, event)
+    
 if __name__ == '__main__':
     app = QApplication(sys.argv) 
     window = ImageProcessorApp()
