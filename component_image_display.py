@@ -147,6 +147,11 @@ class CropImageDisplay(BaseImageDisplay):
         self.last_rect_size = {}  # 存储每个图像最后操作的尺寸 {image_path: rect_size}
         self.last_rect_pos = {}  # 存储每个图像最后操作的位置 {image_path: rect_pos}
         
+    def on_enter_mode(self):
+        """进入模式时的回调"""
+        # 自动设置1:1比例并显示裁切框
+        self.set_aspect_ratio('1:1')
+        
     def set_image(self, image_manager):
         """设置要显示的图像"""
         self.image_manager = image_manager
@@ -155,14 +160,38 @@ class CropImageDisplay(BaseImageDisplay):
             self.original_pixmap = QPixmap(img_path)
             self._scale_image()
             
-            # 检查是否有之前的裁切区域信息
-            if img_path in self.last_rect_size and self.aspect_ratio is not None:
+            # 检查图像是否有已确认的裁切区域
+            if image_manager.roi:
+                # 如果有裁切区域，显示对应的裁切框
+                x, y, w, h = image_manager.roi
+                
+                # 计算显示区域中的裁切矩形
+                scale_x = self.scaled_pixmap.width() / self.original_pixmap.width()
+                scale_y = self.scaled_pixmap.height() / self.original_pixmap.height()
+                
+                # 计算图像在标签中的偏移量
+                x_offset = (self.width() - self.scaled_pixmap.width()) // 2
+                y_offset = (self.height() - self.scaled_pixmap.height()) // 2
+                
+                # 计算显示区域中的裁切矩形
+                display_x = x_offset + int(x * scale_x)
+                display_y = y_offset + int(y * scale_y)
+                display_width = int(w * scale_x)
+                display_height = int(h * scale_y)
+                
+                self.rectangle = QRect(display_x, display_y, display_width, display_height)
+                self.is_selecting = False
+                
+                # 保存最后操作的尺寸和位置
+                self.last_rect_size[img_path] = max(display_width, display_height)
+                self.last_rect_pos[img_path] = self.rectangle
+            elif img_path in self.last_rect_size and self.aspect_ratio is not None:
+                # 如果没有确认的裁切区域，但有历史记录，则使用历史记录
                 self.rect_size = self.last_rect_size[img_path]
                 self.rectangle = self.last_rect_pos[img_path]
-                self.is_selecting = False
-                self.update()
+                self.is_selecting = True
             else:
-                # 只有当设置了比例时才设置默认裁切区域
+                # 否则，只有当设置了比例时才设置默认裁切区域
                 if self.aspect_ratio is not None:
                     self._set_default_rectangle()
                 else:
@@ -217,11 +246,18 @@ class CropImageDisplay(BaseImageDisplay):
                 self.update()
                 return
                 
+            # 设置新比例
             width_ratio, height_ratio = map(int, ratio_str.split(':'))
             self.aspect_ratio = width_ratio / height_ratio
-            if self.image_manager:
+            
+            # 只有当没有确认裁切区域时才设置默认裁切区域
+            if self.image_manager and (not self.image_manager.roi or self.rectangle.isEmpty()):
                 self._set_default_rectangle()
-                self.update()
+                self.is_selecting = True
+                self.image_manager.roi = None
+                self.image_manager.state &= ~self.image_manager.STATE_CROP
+                
+            self.update()
         except ValueError:
             pass
     
@@ -709,9 +745,9 @@ class ModeDisplayManager:
         self.components['empty'].hide()
         self.components['empty'].on_exit_mode()
 
-        self.components['default'] = DefaultImageDisplay(self.app)
-        self.components['default'].hide()
-        self.components['default'].on_exit_mode()
+        self.components['browse'] = DefaultImageDisplay(self.app)
+        self.components['browse'].hide()
+        self.components['browse'].on_exit_mode()
 
         self.components['crop'] = CropImageDisplay(self.app)
         self.components['crop'].hide()

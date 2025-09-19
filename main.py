@@ -30,11 +30,8 @@ class ImageProcessorApp(QMainWindow):
         self.connect_signals()
         
         # 检查图像列表是否为空，如果为空则设置为空模式
-        if not self.image_list_widget.image_list:
-            self.mode_manager.set_mode('empty')
-        else:
-            self.mode_manager.set_mode('default')
-    
+        # self.mode_manager.set_mode('empty')
+
     def init_ui(self):
         # 设置窗口属性
         self.setWindowTitle('图像处理器')
@@ -81,6 +78,13 @@ class ImageProcessorApp(QMainWindow):
         self.resize_mode_button = QPushButton('缩放模式')
         self.mark_mode_button = QPushButton('打标模式')
         self.correct_mode_button = QPushButton('修正模式')
+        self.mode_button_map = {
+            'browse': self.browse_mode_button,
+            'crop': self.crop_mode_button,
+            'resize': self.resize_mode_button,
+            'mark': self.mark_mode_button,
+            'correct': self.correct_mode_button
+        }
         
         # 添加模式选择按钮到布局
         left_layout.addWidget(self.browse_mode_button)
@@ -170,14 +174,14 @@ class ImageProcessorApp(QMainWindow):
         self.delete_work_button.clicked.connect(self.image_list_widget.delete_workspace)
         
         # 模式选择相关信号
-        self.browse_mode_button.clicked.connect(lambda: self.set_mode('default'))
+        self.browse_mode_button.clicked.connect(lambda: self.set_mode('browse'))
         self.crop_mode_button.clicked.connect(lambda: self.set_mode('crop'))
         self.resize_mode_button.clicked.connect(lambda: self.set_mode('resize'))
         self.mark_mode_button.clicked.connect(lambda: self.set_mode('mark'))
         self.correct_mode_button.clicked.connect(lambda: self.set_mode('correct'))
         
         # 连接图像列表变化信号
-        self.image_list_widget.image_list_table.itemChanged.connect(self._update_buttons_state)
+        # self.image_list_widget.image_list_table.itemChanged.connect(self._update_buttons_state)
         self.image_list_widget.image_list_table.model().rowsInserted.connect(self._update_buttons_state)
         self.image_list_widget.image_list_table.model().rowsRemoved.connect(self._update_buttons_state)
         
@@ -193,39 +197,32 @@ class ImageProcessorApp(QMainWindow):
         self.delete_work_button.setEnabled(has_images)
 
         # 模式按钮
-        for mode in ['default', 'crop', 'resize', 'mark', 'correct']:
-            self._set_mode_button_state(mode, has_images)
+        for mode in self.mode_button_map.keys():
+            self.mode_button_map[mode].setEnabled(has_images)
         
         current_mode = self.mode_manager.get_current_mode()
-        if current_mode is not None and not has_images:
-            self.set_mode(None)
-        if current_mode is None and has_images:
-            self.set_mode('default', confirm=False)
+        if has_images and current_mode == 'empty':
+            self.set_mode('browse', confirm=False)
+        if not has_images:
+            self.set_mode('empty')
         
     def set_mode(self, mode, confirm=True):
         """设置当前模式，委托给统一模式显示管理器处理，并显示确认对话框"""
         # 空模式不需要确认对话框
         if mode == 'empty':
             success, message = self.mode_manager.set_mode(mode)
-            if success:
-                self.update_process_info('请先导入图像文件')
-            return
-            
-        if mode is None:
-            self.mode_manager.set_mode(mode)
             return
 
         if not confirm:
             success, message = self.mode_manager.set_mode(mode)
             if success:
                 self._set_mode_button_state(mode, False)
-                self.update_process_info(f'请开始操作！')
             return
         
         from PyQt5.QtWidgets import QMessageBox
         # 显示确认对话框
         mode_names = {
-            'default': '浏览模式', 
+            'browse': '浏览模式', 
             'crop': '裁切模式', 
             'resize': '缩放模式', 
             'mark': '打标模式',
@@ -251,29 +248,20 @@ class ImageProcessorApp(QMainWindow):
             if success:
                 # 禁用新模式的按钮
                 self._set_mode_button_state(mode, False)
-                self.update_process_info(f'已切换到{mode_display_name}')
     
     def _set_mode_button_state(self, mode, enabled):
         """设置模式按钮的可用状态"""
-        button_map = {
-            'default': self.browse_mode_button,
-            'crop': self.crop_mode_button,
-            'resize': self.resize_mode_button,
-            'mark': self.mark_mode_button,
-            'correct': self.correct_mode_button
-        }
-        # 空模式不需要按钮
         if mode == 'empty':
             # 禁用所有模式按钮
-            for btn in button_map.values():
+            for btn in self.mode_button_map.values():
                 btn.setEnabled(False)
             return
             
         # 对于普通模式，启用所有按钮，然后根据需要禁用当前模式按钮
-        for btn in button_map.values():
+        for btn in self.mode_button_map.values():
             btn.setEnabled(True)
         
-        button = button_map.get(mode)
+        button = self.mode_button_map.get(mode)
         if button and not enabled:
             button.setEnabled(enabled)
     
@@ -300,7 +288,8 @@ class ImageProcessorApp(QMainWindow):
             self.mode_manager.set_image(img_manager)
             
             # 更新处理信息
-            self.update_process_info(f'已显示图像: {os.path.basename(img_path)}')
+            self.update_process_info(f'{os.path.basename(img_path)}, ' \
+                f'Size: {img_manager.org_width} x {img_manager.org_height}')
         else:
             self.reset_image_display()
             self.update_process_info('请选择一张图像')
@@ -321,5 +310,5 @@ if __name__ == '__main__':
     app = QApplication(sys.argv) 
     window = ImageProcessorApp()
     window.showMaximized()  # 启动窗口时最大化显示
-
+    
     sys.exit(app.exec_())

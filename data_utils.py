@@ -16,6 +16,7 @@ class ImageDataManager:
         self.original_img = cv2.imread(image_path)
         if self.original_img is None:
             raise ValueError(f"无法加载图像：{image_path}")
+        self.org_height, self.org_width = self.original_img.shape[:2]
         self.reset()
 
     def reset(self):

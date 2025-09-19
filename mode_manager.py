@@ -26,7 +26,7 @@ class ModeManager:
             'resize': 'resize',    # 缩放模式对应缩放显示组件
             'mark': 'mark',        # 打标模式对应打标显示组件
             'correct': 'correct',  # 修正模式对应修正显示组件
-            'default': 'default'   # 默认模式对应默认显示组件
+            'browse': 'browse'   # 默认模式对应默认显示组件
         }
     
     def set_mode_opt_manager(self, mode_opt_manager):
@@ -66,23 +66,7 @@ class ModeManager:
         
         返回:
             (success, message): 成功标志和消息
-        """
-        # 处理None状态
-        if mode_name is None:
-            # 1. 通过模式管理器退出当前模式
-            if self.mode_opt_manager:
-                self.mode_opt_manager.exit_current_mode()
-            
-            # 2. 通过图像显示管理器重置显示
-            if self.image_display_manager:
-                self.image_display_manager.reset()
-            
-            # 3. 更新应用程序状态信息
-            if self.app and hasattr(self.app, 'update_process_info'):
-                self.app.update_process_info('已重置为无模式状态')
-            
-            return True, '已重置为无模式状态'
-        
+        """            
         # 正常模式切换逻辑
         # 1. 先通过模式管理器切换模式操作区域
         if self.mode_opt_manager:
@@ -92,13 +76,8 @@ class ModeManager:
         
         # 2. 然后通过图像显示管理器切换显示组件
         if self.image_display_manager:
-            display_name = self.mode_display_map.get(mode_name, 'default')
+            display_name = self.mode_display_map.get(mode_name, 'browse')
             self.image_display_manager.set_mode(display_name)
-        
-        # 3. 更新应用程序状态信息
-        if self.app and hasattr(self.app, 'update_process_info'):
-            if mode_name == 'default':
-                self.app.update_process_info('当前为默认模式')
         
         return True, f'成功切换到{mode_name}模式'
     
@@ -115,7 +94,7 @@ class ModeManager:
         
         # 2. 切换回默认显示组件
         if self.image_display_manager:
-            self.image_display_manager.set_mode('default')
+            self.image_display_manager.set_mode('browse')
         
         return True, '已退出所有模式，返回到默认状态'
     
@@ -135,7 +114,7 @@ class ModeManager:
         if self.image_display_manager:
             self.image_display_manager.set_display_widget(display_widget)
             # 默认显示默认组件
-            self.image_display_manager.set_mode('default')
+            self.image_display_manager.set_mode('browse')
     
     def get_current_mode(self):
         """

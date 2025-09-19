@@ -81,7 +81,7 @@ class CropOptMode(BaseOptMode):
         # 裁切比例标签和下拉框
         ratio_label = QLabel('裁切比例:')
         self.ratio_combo = QComboBox()
-        self.ratio_combo.addItems(['', '1:1', '3:4', '4:3', '9:16', '16:9'])
+        self.ratio_combo.addItems(['1:1', '3:4', '4:3', '9:16', '16:9'])
         self.add_ui_component(self.ratio_combo)
         
         # 连接比例变化信号
@@ -104,7 +104,8 @@ class CropOptMode(BaseOptMode):
     
     def on_enter(self):
         if self.app:
-            self.app.update_process_info(f'已切换到 {self.display_name}模式\n提示：矩形框实时跟随鼠标，左键确定区域，右键取消，滚轮缩放')
+            self.app.update_process_info(f'已切换到 {self.display_name}模式。'
+                '矩形框实时跟随鼠标，左键确定区域，右键取消，滚轮缩放')
             # 初始化比例
             if hasattr(self.app, 'mode_manager'):
                 current_ratio = self.ratio_combo.currentText()
@@ -272,7 +273,7 @@ class MarkOptMode(BaseOptMode):
 class DefaultOptMode(BaseOptMode):
     """默认浏览模式"""
     def __init__(self, app=None):
-        super().__init__('default', '浏览', 60, app)
+        super().__init__('browse', '浏览', 60, app)
         self.info_label = None
     
     def get_ui_layout(self):
@@ -299,7 +300,7 @@ class DefaultOptMode(BaseOptMode):
 class EmptyOptMode(BaseOptMode):
     """空模式"""
     def __init__(self, app=None):
-        super().__init__('empty', '空状态', 60, app)
+        super().__init__('empty', '空状态', 20, app)
         self.info_label = None
     
     def get_ui_layout(self):
@@ -307,10 +308,10 @@ class EmptyOptMode(BaseOptMode):
         layout = QHBoxLayout()
         
         # 创建信息标签
-        self.info_label = QLabel('暂无图像，请先导入图像文件')
-        self.info_label.setStyleSheet('color: gray; font-style: italic;')
+        # self.info_label = QLabel('暂无图像，请先导入图像文件')
+        # self.info_label.setStyleSheet('color: gray; font-style: italic;')
         
-        layout.addWidget(self.info_label)
+        # layout.addWidget(self.info_label)
         layout.addStretch(1)  # 添加弹性空间
         
         return layout
@@ -506,7 +507,7 @@ class ModeOptManager:
             self.operation_widget.updateGeometry()
             
             if self.app:
-                self.app.update_process_info('已退出所有模式，当前为就绪状态')
+                self.app.update_process_info('已退出所有模式')
             
             return True, '已退出当前模式'
         return False, '当前没有激活的模式'

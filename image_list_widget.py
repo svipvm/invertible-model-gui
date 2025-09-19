@@ -25,6 +25,10 @@ class StatusCircleDelegate(QStyledItemDelegate):
         state = index.data(Qt.UserRole)
         if state is None:
             state = ImageDataManager.STATE_NONE
+        else:
+            # 获取state的最后一个1的位置对应的状态
+            last_bit = state & -state  # 获取最低位的1
+            state = last_bit if last_bit in self.STATUS_COLORS else ImageDataManager.STATE_NONE
         
         # 设置抗锯齿
         painter.setRenderHint(QPainter.Antialiasing)
@@ -135,8 +139,8 @@ class ImageListWidget(QWidget):
                 # 更新表格
                 self.update_table()
                 # 如果之前是空模式，切换到默认模式
-                if was_empty and self.app and hasattr(self.app, 'set_mode'):
-                    self.app.set_mode('default')
+                # if was_empty and self.app and hasattr(self.app, 'set_mode'):
+                #     self.app.set_mode('browse')
                 # 触发显示图像信号
                 self.on_image_selected(last_row, 0)
                 # 更新处理信息
@@ -193,8 +197,8 @@ class ImageListWidget(QWidget):
                 # 更新表格
                 self.update_table()
                 # 如果之前是空模式，切换到默认模式
-                if was_empty and self.app and hasattr(self.app, 'set_mode'):
-                    self.app.set_mode('default')
+                # if was_empty and self.app and hasattr(self.app, 'set_mode'):
+                #     self.app.set_mode('browse')
                 # 触发显示图像信号
                 self.on_image_selected(last_row, 0)
                 # 更新处理信息
